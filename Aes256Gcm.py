@@ -36,5 +36,5 @@ def decrypt(key: bytes, iv: bytes, input: Iterable[bytes]):
     try:
         yield decryptor.finalize_with_tag(tag)
     except InvalidTag as e:
-        raise ValueError("The authentication tag did not match. Most likely the data is corrupt or the key is incorrect.") from e
+        raise ValueError("The authentication tag did not match. Most likely the key is incorrect or the data is corrupt.") from e
 

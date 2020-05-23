@@ -18,7 +18,7 @@ parser.add_argument("action",
 parser.add_argument("-f", "--fast",
                     action="store_false",
                     dest="sensitive",
-                    help="use fast encryption, which takes less time but is weaker against brute-force attacks.",
+                    help="use fast encryption, which takes less time but is weaker against brute-force attacks. this option is ignored when decrypting.",
                     default=True)
 parser.add_argument("-in", "--input",
                     dest="input",
@@ -30,7 +30,7 @@ parser.add_argument("-out", "--output",
                     metavar="FILE",
                     help="the file to output to. by default output is written to stdout",
                     default=None)
-parser.add_argument("-pw", "--password_environment_variable",
+parser.add_argument("-pw", "--password-env-var",
                     dest="pass_env",
                     metavar="ENV_VAR",
                     help="the name of the environment variable that contains the password. this is not the password itself",
@@ -38,7 +38,7 @@ parser.add_argument("-pw", "--password_environment_variable",
 parser.add_argument("-s", "--sensitive",
                     action="store_true",
                     dest="sensitive",
-                    help="use sensitive encryption, which takes longer but is stronger against brute-force attacks. this is the default",
+                    help="use sensitive encryption, which takes longer but is stronger against brute-force attacks. this is the default. this option is ignored when decrypting.",
                     default=True)
 parser.add_argument("-v", "--verbose",
                     action="store_true",
@@ -76,9 +76,12 @@ else:
     password = getpass.getpass("Enter passphrase: ")
 
 
-if options.action == "enc":
-    for chunk in EasyEncrypt.encrypt(password, chunk(stdin, 1024 * 1024), options.sensitive):
-        stdout.write(chunk)
-elif options.action == "dec":
-    for chunk in EasyEncrypt.decrypt(password, chunk(stdin, 1024 * 1024)):
-        stdout.write(chunk)
+try:
+    if options.action == "enc":
+        for chunk in EasyEncrypt.encrypt(password, chunk(stdin, 1024 * 1024), options.sensitive):
+            stdout.write(chunk)
+    elif options.action == "dec":
+        for chunk in EasyEncrypt.decrypt(password, chunk(stdin, 1024 * 1024)):
+            stdout.write(chunk)
+except Exception as e:
+    sys.stderr.write(str(e) + "\n")
