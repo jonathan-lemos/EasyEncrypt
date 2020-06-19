@@ -1,4 +1,4 @@
-import Aes256Gcm
+import aes256gcm
 import unittest
 
 
@@ -10,10 +10,10 @@ class TestArgon2Params(unittest.TestCase):
         data_chunks = [bytes(range(i, 71 + i)) for i in range(6)]
         data_flat = b''.join(data_chunks)
 
-        enc = list(Aes256Gcm.encrypt(key, iv, data_chunks))
+        enc = list(aes256gcm.encrypt(key, iv, data_chunks))
         enc_flat = b''.join(enc)
         enc_processed = [enc_flat[i: i + 67] for i in range(0, len(enc_flat), 67)]
 
-        dec = list(Aes256Gcm.decrypt(key, iv, filter(lambda x: x != b'', enc_processed)))
+        dec = list(aes256gcm.decrypt(key, iv, filter(lambda x: x != b'', enc_processed)))
 
         self.assertEqual(data_flat, b''.join(dec))

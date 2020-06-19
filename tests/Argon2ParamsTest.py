@@ -1,4 +1,4 @@
-from Argon2Params import Argon2Params
+from argon2kdf import Argon2Params
 import unittest
 
 

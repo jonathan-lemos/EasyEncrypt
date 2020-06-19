@@ -1,11 +1,14 @@
-from Argon2Params import Argon2Params
-import Aes256Gcm
-from typing import Iterable
-from Random import rand_bytes
+from argon2kdf import Argon2Kdf
+from aes256gcm import Aes256GcmCipher
+from typing import Iterable, Union
+
+from cipher import Cipher
+from kdf import Kdf
+from random import rand_bytes
 import itertools
 
 
-def encrypt(password: str, input: Iterable[bytes], sensitive: bool = True):
+def encrypt(password: str, kdf: Kdf, cipher: Cipher, input: Union[bytes, Iterable[bytes], str]):
     a2 = Argon2Params.sensitive() if sensitive else Argon2Params.fast()
     iv = rand_bytes(32)
     key = a2.derive(password, 32)
@@ -13,7 +16,7 @@ def encrypt(password: str, input: Iterable[bytes], sensitive: bool = True):
     yield a2.serialize()
     yield len(iv).to_bytes(2, "big")
     yield iv
-    yield from Aes256Gcm.encrypt(key, iv, input)
+    yield from aes256gcm.encrypt(key, iv, input)
 
 
 def decrypt(password: str, input: Iterable[bytes]):
@@ -55,5 +58,5 @@ def decrypt(password: str, input: Iterable[bytes]):
 
     key = a2.derive(password, 32)
 
-    yield from Aes256Gcm.decrypt(key, iv, itertools.chain([buf], it))
+    yield from aes256gcm.decrypt(key, iv, itertools.chain([buf], it))
 

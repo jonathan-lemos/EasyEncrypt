@@ -1,4 +1,4 @@
-import EasyEncrypt
+import easyencrypt
 import argparse
 import sys
 import getpass
@@ -70,18 +70,17 @@ if options.action not in {"enc", "dec"}:
 if options.pass_env is not None:
     password = os.environ.get(options.pass_env)
     if password is None:
-        print(f"The given password environment variable {options.pass_env} was not set.")
+        print(f"\nThe given password environment variable {options.pass_env} was not set.")
         sys.exit(0)
 else:
     password = getpass.getpass("Enter passphrase: ")
 
-
 try:
     if options.action == "enc":
-        for chunk in EasyEncrypt.encrypt(password, chunk(stdin, 1024 * 1024), options.sensitive):
+        for chunk in easyencrypt.encrypt(password, chunk(stdin, 1024 * 1024), options.sensitive):
             stdout.write(chunk)
     elif options.action == "dec":
-        for chunk in EasyEncrypt.decrypt(password, chunk(stdin, 1024 * 1024)):
+        for chunk in easyencrypt.decrypt(password, chunk(stdin, 1024 * 1024)):
             stdout.write(chunk)
 except Exception as e:
     sys.stderr.write(str(e) + "\n")
