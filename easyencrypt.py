@@ -1,62 +1,70 @@
-from argon2kdf import Argon2Kdf
-from aes256gcm import Aes256GcmCipher
+import hashlib
 from typing import Iterable, Union
 
+from aes256gcmcipher import Aes256GcmCipher
+from argon2kdf import Argon2Kdf
 from cipher import Cipher
 from kdf import Kdf
-from random import rand_bytes
-import itertools
+import json
+from bufferedreader import BufferedReader
+
+
+def sha256hash(b: bytes):
+    m = hashlib.sha256()
+    m.update(b)
+    return m.digest()
 
 
 def encrypt(password: str, kdf: Kdf, cipher: Cipher, input: Union[bytes, Iterable[bytes], str]):
-    a2 = Argon2Params.sensitive() if sensitive else Argon2Params.fast()
-    iv = rand_bytes(32)
-    key = a2.derive(password, 32)
+    key = kdf.derive(password, cipher.key_length())
 
-    yield a2.serialize()
-    yield len(iv).to_bytes(2, "big")
-    yield iv
-    yield from aes256gcm.encrypt(key, iv, input)
+    head_kdf = kdf.serialize()
+    head_cipher = cipher.serialize()
+    header = {
+        "kdf": head_kdf,
+        "cipher": head_cipher
+    }
+    header_bytes = bytes(json.dumps(header), "utf-8")
 
-
-def decrypt(password: str, input: Iterable[bytes]):
-    buf = b''
-    it = iter(input)
-
-    def get(n: int):
-        nonlocal buf
-        nonlocal it
-
-        while len(buf) < n:
-            tmp = next(it, None)
-            if tmp is None:
-                return None
-            buf += tmp
-
-        ret, buf = buf[:n], buf[n:]
-
-        return ret
-
-    a2_head = b''
-    while isinstance(a2 := Argon2Params.deserialize(a2_head), int):
-        tmp = get(a2 - len(a2_head))
-        if tmp is None:
-            raise ValueError("The given data is not long enough to be EasyEncrypted data.")
-        a2_head += tmp
+    yield b'EZ'
+    yield len(header_bytes).to_bytes(4, "big")
+    yield header_bytes
+    yield from cipher.encrypt(key, input)
 
 
-    iv_len = get(2)
-    if iv_len is None:
-        raise ValueError("The given data is not long enough to be EasyEncrypted data.")
-    iv_len = int.from_bytes(iv_len, "big")
-    if iv_len < 0:
-        raise ValueError("The given data is not valid EasyEncrypted data (iv_len cannot be < 0).")
+def decrypt(password: str, input: Union[bytes, Iterable[bytes], str]) -> Iterable[bytes]:
+    with BufferedReader(input) as br:
+        if br.read(2) != b'EZ':
+            raise ValueError("The data is not valid easyencrypted data (magic header missing)")
 
-    iv = get(iv_len)
-    if iv is None:
-        raise ValueError("The given data is not valid EasyEncrypted data (not enough bytes to fill iv).")
+        len_bytes = br.read(4)
+        if len(len_bytes) != 4:
+            raise ValueError("The data is not valid easyencrypted data (header length field missing)")
 
-    key = a2.derive(password, 32)
+        header_len = int.from_bytes(len_bytes, "big")
+        if header_len < 0:
+            raise ValueError("The data is not valid easyencrypted data (header length is negative)")
 
-    yield from aes256gcm.decrypt(key, iv, itertools.chain([buf], it))
+        header_bytes = br.read(header_len)
+        if len(header_bytes) != header_len:
+            raise ValueError("The data is not valid easyencrypted data (reached EOF while reading header)")
+
+        header_str = str(header_bytes, "utf-8")
+        header = json.loads(header_str)
+        header_kdf = header["kdf"]
+        header_cipher = header["cipher"]
+
+        kdf = {
+            "argon2id": Argon2Kdf.deserialize,
+            "argon2d": Argon2Kdf.deserialize,
+            "argon2i": Argon2Kdf.deserialize,
+        }[header_kdf["algorithm"]](header_kdf)
+
+        cipher = {
+            "aes-256-gcm": Aes256GcmCipher.deserialize
+        }[header_cipher["algorithm"]](header_cipher)
+
+        key = kdf.derive(password, cipher.key_length())
+
+        return cipher.decrypt(key, br.chunks())
 

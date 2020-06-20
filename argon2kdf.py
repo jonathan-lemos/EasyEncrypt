@@ -1,20 +1,12 @@
 import argon2
-import base64
-import hashlib
+import b64
 from typing import Optional, Dict, Union, List
-from random import rand_bytes
+from securerandom import rand_bytes
 from kdf import Kdf
 
 
-def sha256hash(b: bytes):
-    m = hashlib.sha256()
-    m.update(b)
-    return m.digest()
-
 
 class Argon2Kdf(Kdf):
-    VERSION = 1
-
     @staticmethod
     def sensitive():
         return Argon2Kdf(12, 2 * 1024 * 1024, 8, argon2.Type.ID, rand_bytes(32))
@@ -69,28 +61,28 @@ class Argon2Kdf(Kdf):
         if not base_keys.issubset(props.keys()):
             raise ValueError(f"The properties dict is missing required keys {base_keys - props.keys()}")
 
-        ret.type = Argon2Kdf.__str_to_type(props["cipher"])
+        ret.type = Argon2Kdf.__str_to_type(props["algorithm"])
         ret.version = props["version"]
         ret.time_cost = props["time_cost"]
         ret.memory_cost = props["memory_cost"]
         ret.parallelism = props["parallelism"]
-        ret.salt = base64.b64decode(props["salt"], validate=True)
+        ret.salt = b64.decode(props["salt"])
 
         return ret
 
     def serialize(self) -> Dict[str, Union[str, int, bool, None, Dict, List]]:
         return {
-            "cipher": self.__type_to_str(self.type),
+            "algorithm": self.__type_to_str(self.type),
             "version": self.version,
             "time_cost": self.time_cost,
             "memory_cost": self.memory_cost,
             "parallelism": self.parallelism,
-            "salt": base64.b64encode(self.salt),
+            "salt": b64.encode(self.salt),
         }
 
     def derive(self, password: str, out_len: int) -> bytes:
         return argon2.low_level.hash_secret_raw(bytes(password, "utf-8"), self.salt, self.time_cost, self.memory_cost,
-                                                self.parallelism, out_len, self.type)
+                                                self.parallelism, out_len, self.type, self.version)
 
     def __init__(self, time_cost: int, memory_cost: int, parallelism: int, type: argon2.Type,
                  salt: Optional[bytes] = None, version: int = argon2.low_level.ARGON2_VERSION):
