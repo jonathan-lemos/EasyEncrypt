@@ -1,12 +1,15 @@
 import hashlib
 from typing import Iterable, Union
 
-from aes256gcmcipher import Aes256GcmCipher
-from argon2kdf import Argon2Kdf
-from cipher import Cipher
-from kdf import Kdf
+from ciphers.aes256gcmcipher import Aes256GcmCipher
+from kdfs.argon2kdf import Argon2Kdf
+from ciphers.cipher import Cipher
+from kdfs.kdf import Kdf
 import json
 from bufferedreader import BufferedReader
+
+import ciphers.cipherext
+import kdfs.kdfext
 
 
 def sha256hash(b: bytes):
@@ -54,15 +57,9 @@ def decrypt(password: str, input: Union[bytes, Iterable[bytes], str]) -> Iterabl
         header_kdf = header["kdf"]
         header_cipher = header["cipher"]
 
-        kdf = {
-            "argon2id": Argon2Kdf.deserialize,
-            "argon2d": Argon2Kdf.deserialize,
-            "argon2i": Argon2Kdf.deserialize,
-        }[header_kdf["algorithm"]](header_kdf)
+        kdf = kdfs.kdfext.deserialize(header_kdf)
 
-        cipher = {
-            "aes-256-gcm": Aes256GcmCipher.deserialize
-        }[header_cipher["algorithm"]](header_cipher)
+        cipher = ciphers.cipherext.deserialize(header_cipher)
 
         key = kdf.derive(password, cipher.key_length())
 

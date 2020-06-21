@@ -1,25 +1,10 @@
-from abc import ABC, abstractmethod
 from typing import Dict, List, Union, Iterable, Tuple, Optional
-from argon2kdf import Argon2Kdf
-from scryptkdf import ScryptKdf
+from kdfs.argon2kdf import Argon2Kdf
+from kdfs.scryptkdf import ScryptKdf
+from kdfs.kdf import Kdf
 from math import floor, log2
 import re
 import log
-
-
-class Kdf(ABC):
-    @abstractmethod
-    def derive(self, password: str, out_len: int) -> bytes:
-        pass
-
-    @abstractmethod
-    def serialize(self) -> Dict[str, Union[str, int, bool, None, Dict, List]]:
-        pass
-
-    @staticmethod
-    @abstractmethod
-    def deserialize(props: Dict[str, Union[str, int, bool, None, Dict, List]]) -> "Kdf":
-        pass
 
 
 def __parse_memory_unit(val: str) -> int:
@@ -56,11 +41,14 @@ def __parse_memory_unit(val: str) -> int:
 def __parse_argon2(name: str, params: List[Tuple[str, Optional[str]]]) -> Argon2Kdf:
     ret = Argon2Kdf.sensitive()
 
+    if name == "argon2":
+        name = "argon2id"
     ret.type = Argon2Kdf.str_to_type(name)
+
     for key, value in params:
         if key == "fast":
             ret = Argon2Kdf.fast()
-        elif key == "sensitivt":
+        elif key == "sensitive":
             ret = Argon2Kdf.sensitive()
         elif value is None:
             log.warning(f"Key '{key}' is unrecognized for argon2 and/or needs an associated value.")
@@ -110,6 +98,7 @@ def __parse_scrypt(name: str, params: List[Tuple[str, Optional[str]]]) -> Scrypt
 
 
 __kdf_switcher = {
+    "argon2": (Argon2Kdf.deserialize, __parse_argon2),
     "argon2id": (Argon2Kdf.deserialize, __parse_argon2),
     "argon2d": (Argon2Kdf.deserialize, __parse_argon2),
     "argon2i": (Argon2Kdf.deserialize, __parse_argon2),
@@ -141,10 +130,9 @@ def from_option_string(s: str) -> Kdf:
     name = re.sub(r":.*$", "", s)
     params = re.sub(r"^.*?:", "", s) if ":" in s else ""
 
-    par = [tuple(z) if len(z) == 2 else (z[0], None) for z in map(lambda x: x.strip().split("="), params.split(","))]
+    par = [tuple(z) if len(z) == 2 else (z[0], None) for z in map(lambda x: x.strip().split("=") if "=" in x else [], params.split(",") if "," in params else [])]
 
     if name not in __kdf_switcher:
         raise ValueError(f"The given kdf algorithm '{name}' is not supported.")
 
     return __kdf_switcher[name][1](name, par)
-

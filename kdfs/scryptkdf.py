@@ -2,7 +2,7 @@ import hashlib
 from typing import Dict, Union, List, Optional
 
 import b64
-from kdf import Kdf
+from kdfs.kdf import Kdf
 from securerandom import rand_bytes
 
 

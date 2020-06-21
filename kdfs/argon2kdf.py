@@ -2,7 +2,7 @@ import argon2
 import b64
 from typing import Optional, Dict, Union, List
 from securerandom import rand_bytes
-from kdf import Kdf
+from kdfs.kdf import Kdf
 
 
 

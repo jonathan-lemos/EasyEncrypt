@@ -3,8 +3,10 @@ import argparse
 import sys
 import getpass
 import os
+import ciphers.cipherext
+import kdfs.kdfext
+import log
 
-from argon2kdf import Argon2Kdf
 
 
 def chunk(handle, size: int):
@@ -50,6 +52,10 @@ parser.add_argument("-v", "--verbose",
 
 options = parser.parse_args()
 
+if options.input is None and options.pass_env is None:
+    log.error("Cannot read input from stdin without --password-env-var")
+    sys.exit(0)
+
 if options.input is None:
     stdin = sys.stdin.buffer
 else:
@@ -78,11 +84,18 @@ else:
     password = getpass.getpass("Enter passphrase: ")
 
 if options.kdf is None:
-    kdf = Argon2Kdf.sensitive()
+    kdf = kdfs.kdfext.default_kdf()
+else:
+    kdf = kdfs.kdfext.from_option_string(options.kdf)
+
+if options.cipher is None:
+    cipher = ciphers.cipherext.default_cipher()
+else:
+    cipher = ciphers.cipherext.from_option_string(options.cipher)
 
 try:
     if options.action == "enc":
-        for chunk in easyencrypt.encrypt(password, chunk(stdin, 1024 * 1024)):
+        for chunk in easyencrypt.encrypt(password, kdf, cipher, chunk(stdin, 1024 * 1024)):
             stdout.write(chunk)
     elif options.action == "dec":
         for chunk in easyencrypt.decrypt(password, chunk(stdin, 1024 * 1024)):

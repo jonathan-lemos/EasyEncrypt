@@ -1,4 +1,4 @@
-from argon2kdf import Argon2Kdf
+from kdfs.argon2kdf import Argon2Kdf
 import unittest
 
 

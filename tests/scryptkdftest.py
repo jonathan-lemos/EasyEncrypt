@@ -1,4 +1,4 @@
-from scryptkdf import ScryptKdf
+from kdfs.scryptkdf import ScryptKdf
 import unittest
 
 
