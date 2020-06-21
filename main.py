@@ -4,6 +4,8 @@ import sys
 import getpass
 import os
 
+from argon2kdf import Argon2Kdf
+
 
 def chunk(handle, size: int):
     while len(buf := handle.read(size)) != 0:
@@ -11,19 +13,24 @@ def chunk(handle, size: int):
 
 
 parser = argparse.ArgumentParser(
-    description="Encrypts or decrypts input.")
+    description="Symmetrically encrypts or decrypts input.")
 parser.add_argument("action",
                     metavar="ACTION",
-                    help="'enc' to encrypt, 'dec' to decrypt")
-parser.add_argument("-f", "--fast",
-                    action="store_false",
-                    dest="sensitive",
-                    help="use fast encryption, which takes less time but is weaker against brute-force attacks. this option is ignored when decrypting.",
-                    default=True)
+                    help="'enc' to encrypt, 'dec' to decrypt. 'kdfs' to see a list of kdfs and their options. 'ciphers' to see a list of ciphers and their options")
+parser.add_argument("-c", "--cipher",
+                    dest="cipher",
+                    metavar="CIPHER[:PARAMS]?",
+                    help="the cipher to use along with any parameters",
+                    default=None)
 parser.add_argument("-in", "--input",
                     dest="input",
                     metavar="FILE",
                     help="a file to encrypt. by default input is taken from stdin",
+                    default=None)
+parser.add_argument("-k", "--kdf",
+                    dest="kdf",
+                    metavar="KDF[:PARAMS]?",
+                    help="the key derivation function to use along with any parameters",
                     default=None)
 parser.add_argument("-out", "--output",
                     dest="output",
@@ -35,11 +42,6 @@ parser.add_argument("-pw", "--password-env-var",
                     metavar="ENV_VAR",
                     help="the name of the environment variable that contains the password. this is not the password itself",
                     default=None)
-parser.add_argument("-s", "--sensitive",
-                    action="store_true",
-                    dest="sensitive",
-                    help="use sensitive encryption, which takes longer but is stronger against brute-force attacks. this is the default. this option is ignored when decrypting.",
-                    default=True)
 parser.add_argument("-v", "--verbose",
                     action="store_true",
                     dest="verbose",
@@ -62,22 +64,25 @@ if options.action is None:
     parser.print_help()
     sys.exit(0)
 
-if options.action not in {"enc", "dec"}:
+if options.action not in {"enc", "dec", "kdfs", "ciphers"}:
     parser.print_help()
-    print(f"\nAction must be one of [enc, dec], was {options.action}.")
-    sys.exit(0)
+    print(f"\nAction must be one of [enc, dec, kdfs, ciphers], was {options.action}.")
+    sys.exit(1)
 
 if options.pass_env is not None:
     password = os.environ.get(options.pass_env)
     if password is None:
         print(f"\nThe given password environment variable {options.pass_env} was not set.")
-        sys.exit(0)
+        sys.exit(1)
 else:
     password = getpass.getpass("Enter passphrase: ")
 
+if options.kdf is None:
+    kdf = Argon2Kdf.sensitive()
+
 try:
     if options.action == "enc":
-        for chunk in easyencrypt.encrypt(password, chunk(stdin, 1024 * 1024), options.sensitive):
+        for chunk in easyencrypt.encrypt(password, chunk(stdin, 1024 * 1024)):
             stdout.write(chunk)
     elif options.action == "dec":
         for chunk in easyencrypt.decrypt(password, chunk(stdin, 1024 * 1024)):

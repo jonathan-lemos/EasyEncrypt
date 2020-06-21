@@ -16,7 +16,7 @@ class Argon2Kdf(Kdf):
         return Argon2Kdf(2, 256 * 1024, 2, argon2.Type.ID, rand_bytes(16))
 
     @staticmethod
-    def __type_to_str(type: argon2.Type):
+    def type_to_str(type: argon2.Type):
         return {
             argon2.Type.I: "argon2i",
             argon2.Type.D: "argon2d",
@@ -24,7 +24,7 @@ class Argon2Kdf(Kdf):
         }[type]
 
     @staticmethod
-    def __str_to_type(type: str):
+    def str_to_type(type: str):
         try:
             return {
                 "argon2i": argon2.Type.I,
@@ -61,7 +61,7 @@ class Argon2Kdf(Kdf):
         if not base_keys.issubset(props.keys()):
             raise ValueError(f"The properties dict is missing required keys {base_keys - props.keys()}")
 
-        ret.type = Argon2Kdf.__str_to_type(props["algorithm"])
+        ret.type = Argon2Kdf.str_to_type(props["algorithm"])
         ret.version = props["version"]
         ret.time_cost = props["time_cost"]
         ret.memory_cost = props["memory_cost"]
@@ -72,7 +72,7 @@ class Argon2Kdf(Kdf):
 
     def serialize(self) -> Dict[str, Union[str, int, bool, None, Dict, List]]:
         return {
-            "algorithm": self.__type_to_str(self.type),
+            "algorithm": self.type_to_str(self.type),
             "version": self.version,
             "time_cost": self.time_cost,
             "memory_cost": self.memory_cost,
