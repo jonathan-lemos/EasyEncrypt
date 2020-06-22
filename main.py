@@ -42,7 +42,7 @@ parser.add_argument("-out", "--output",
 parser.add_argument("-pw", "--password-env-var",
                     dest="pass_env",
                     metavar="ENV_VAR",
-                    help="the name of the environment variable that contains the password. this is not the password itself",
+                    help="the name of the environment variable that contains the password (default EASYENCRYPT_PW). this is not the password itself",
                     default=None)
 parser.add_argument("-v", "--verbose",
                     action="store_true",
@@ -51,10 +51,6 @@ parser.add_argument("-v", "--verbose",
                     default=False)
 
 options = parser.parse_args()
-
-if options.input is None and options.pass_env is None:
-    log.error("Cannot read input from stdin without --password-env-var")
-    sys.exit(0)
 
 if options.input is None:
     stdin = sys.stdin.buffer
@@ -75,10 +71,12 @@ if options.action not in {"enc", "dec", "kdfs", "ciphers"}:
     print(f"\nAction must be one of [enc, dec, kdfs, ciphers], was {options.action}.")
     sys.exit(1)
 
+if not stdin.isatty() and options.pass_env is None:
+    options.pass_env = "EASYENCRYPT_PW"
 if options.pass_env is not None:
     password = os.environ.get(options.pass_env)
     if password is None:
-        print(f"\nThe given password environment variable {options.pass_env} was not set.")
+        print(f"\nThe password environment variable '{options.pass_env}' was not set.")
         sys.exit(1)
 else:
     password = getpass.getpass("Enter passphrase: ")

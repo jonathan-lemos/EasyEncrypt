@@ -7,6 +7,7 @@ from securerandom import rand_bytes
 from typing import Dict, Iterable, List, Union, Optional, Tuple
 import log
 import sys
+import b64
 
 
 def __parse_aes256gcm(name: str, params: List[Tuple[str, Optional[str]]]) -> Aes256GcmCipher:
@@ -19,7 +20,12 @@ def __parse_aes256gcm(name: str, params: List[Tuple[str, Optional[str]]]) -> Aes
         if key in {"iv", "nonce"}:
             if value is None:
                 value = ''
-            ret = Aes256GcmCipher(bytes(value, 'utf-8'))
+            ret = Aes256GcmCipher(b64.decode(value))
+        if key in {"iv-len", "nonce-len"}:
+            if value is None:
+                log.warning(f"No value given for key '{key}'.")
+            iint = int(value)
+            ret = Aes256GcmCipher(rand_bytes(iint))
         else:
             log.warning(f"Unrecognized key '{key}' in params string.")
 
@@ -36,7 +42,7 @@ def __parse_chacha20(name: str, params: List[Tuple[str, Optional[str]]]) -> ChaC
         if key in {"iv", "nonce"}:
             if value is None:
                 value = ''
-            byt = bytes(value, 'utf-8')
+            byt = b64.decode(value)
             if len(byt) != 12:
                 log.error("Nonce must be 12 bytes")
                 sys.exit(0)
