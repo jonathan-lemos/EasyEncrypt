@@ -1,10 +1,14 @@
 from typing import Dict, List, Union, Iterable, Tuple, Optional
+
+import b64
 from kdfs.argon2kdf import Argon2Kdf
 from kdfs.scryptkdf import ScryptKdf
 from kdfs.kdf import Kdf
 from math import floor, log2
 import re
 import log
+
+from securerandom import rand_unique_bytes
 
 
 def __parse_memory_unit(val: str) -> int:
@@ -59,7 +63,10 @@ def __parse_argon2(name: str, params: List[Tuple[str, Optional[str]]]) -> Argon2
             mint = __parse_memory_unit(value) // 1024
             ret.memory_cost = mint
         elif key in {"salt", "s"}:
-            ret.salt = bytes(value, "utf-8")
+            ret.salt = b64.decode(value)
+        elif key in {"salt-len", "sl"}:
+            sint = int(value)
+            ret.salt = rand_unique_bytes(sint)
         elif key in {"parallelism", "para", "p"}:
             pint = int(value)
             ret.parallelism = pint
@@ -90,6 +97,11 @@ def __parse_scrypt(name: str, params: List[Tuple[str, Optional[str]]]) -> Scrypt
             ret.r = int(value)
         elif key in {"p"}:
             ret.p = int(value)
+        elif key in {"salt", "s"}:
+            ret.salt = b64.decode(value)
+        elif key in {"salt-len", "sl"}:
+            sint = int(value)
+            ret.salt = rand_unique_bytes(sint)
         else:
             log.warning(f"Unrecognized key '{key}' in params string.")
 

@@ -54,6 +54,8 @@ def decrypt(password: str, input: Union[bytes, Iterable[bytes], str]) -> Iterabl
 
         header_str = str(header_bytes, "utf-8")
         header = json.loads(header_str)
+        if not isinstance(header, dict):
+            raise ValueError("The header must be a dictionary.")
         header_kdf = header["kdf"]
         header_cipher = header["cipher"]
 

@@ -1,16 +1,20 @@
-from typing import Union, Dict, List, Any
+from typing import Union, Dict, List, Any, Optional
 from Crypto.Cipher import AES
 
 import b64
 from ciphers.aeadcipher import AeadCipher
 
+from securerandom import rand_unique_bytes
+
 
 class Aes256GcmCipher(AeadCipher):
-    def __init__(self, nonce: bytes):
-        self.__nonce = nonce
+    def __init__(self, nonce: Optional[bytes] = None):
+        if nonce is None:
+            nonce = rand_unique_bytes(32)
+        self.nonce = nonce
 
     def _get_encryptor(self, key: bytes) -> Any:
-        return AES.new(key, AES.MODE_GCM, nonce=self.__nonce, mac_len=self._mac_len())
+        return AES.new(key, AES.MODE_GCM, nonce=self.nonce, mac_len=self._mac_len())
 
     def _get_decryptor(self, key: bytes) -> Any:
         return self._get_encryptor(key)
@@ -24,7 +28,7 @@ class Aes256GcmCipher(AeadCipher):
     def serialize(self) -> Dict[str, Union[str, int, bool, None, Dict, List]]:
         return {
             "algorithm": "aes-256-gcm",
-            "nonce": b64.encode(self.__nonce)
+            "nonce": b64.encode(self.nonce)
         }
 
     @staticmethod
@@ -38,6 +42,6 @@ class Aes256GcmCipher(AeadCipher):
         if props["algorithm"] != ret.serialize()["algorithm"]:
             raise ValueError(f"Expected an algo field of 'aes-256-gcm'. Got '{ret.serialize()['algo']}.")
 
-        ret.__nonce = b64.decode(props["nonce"])
+        ret.nonce = b64.decode(props["nonce"])
 
         return ret

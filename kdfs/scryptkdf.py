@@ -3,7 +3,7 @@ from typing import Dict, Union, List, Optional
 
 import b64
 from kdfs.kdf import Kdf
-from securerandom import rand_bytes
+from securerandom import rand_unique_bytes
 
 
 class ScryptKdf(Kdf):
@@ -17,7 +17,7 @@ class ScryptKdf(Kdf):
 
     def __init__(self, log2_n: int, r: int, p: int, salt: Optional[bytes] = None):
         self.log2_n, self.r, self.p = log2_n, r, p
-        self.salt = salt if salt is not None else rand_bytes(32)
+        self.salt = salt if salt is not None else rand_unique_bytes(32)
 
     def derive(self, password: str, out_len: int) -> bytes:
         return hashlib.scrypt(bytes(password, "utf-8"),

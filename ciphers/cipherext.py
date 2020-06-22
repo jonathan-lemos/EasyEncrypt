@@ -3,7 +3,7 @@ import re
 from ciphers.aes256gcmcipher import Aes256GcmCipher
 from ciphers.chacha20poly1305cipher import ChaCha20Poly1305Cipher
 from ciphers.cipher import Cipher
-from securerandom import rand_bytes
+from securerandom import rand_unique_bytes
 from typing import Dict, Iterable, List, Union, Optional, Tuple
 import log
 import sys
@@ -11,7 +11,7 @@ import b64
 
 
 def __parse_aes256gcm(name: str, params: List[Tuple[str, Optional[str]]]) -> Aes256GcmCipher:
-    ret = Aes256GcmCipher(rand_bytes(32))
+    ret = Aes256GcmCipher()
 
     if name not in {"aes256", "aes256gcm", "aes-256", "aes-256-gcm", "aes256-gcm"}:
         raise ValueError(f"Given name '{name}' is not aes-256-gcm")
@@ -20,12 +20,12 @@ def __parse_aes256gcm(name: str, params: List[Tuple[str, Optional[str]]]) -> Aes
         if key in {"iv", "nonce"}:
             if value is None:
                 value = ''
-            ret = Aes256GcmCipher(b64.decode(value))
+            ret.nonce = b64.decode(value)
         if key in {"iv-len", "nonce-len"}:
             if value is None:
                 log.warning(f"No value given for key '{key}'.")
             iint = int(value)
-            ret = Aes256GcmCipher(rand_bytes(iint))
+            ret.nonce = rand_unique_bytes(iint)
         else:
             log.warning(f"Unrecognized key '{key}' in params string.")
 
@@ -33,7 +33,7 @@ def __parse_aes256gcm(name: str, params: List[Tuple[str, Optional[str]]]) -> Aes
 
 
 def __parse_chacha20(name: str, params: List[Tuple[str, Optional[str]]]) -> ChaCha20Poly1305Cipher:
-    ret = ChaCha20Poly1305Cipher(rand_bytes(12))
+    ret = ChaCha20Poly1305Cipher()
 
     if name not in {"chacha20poly1305", "chacha20-poly1305"}:
         raise ValueError(f"Given name '{name}' is not aes-256-gcm")
@@ -46,7 +46,7 @@ def __parse_chacha20(name: str, params: List[Tuple[str, Optional[str]]]) -> ChaC
             if len(byt) != 12:
                 log.error("Nonce must be 12 bytes")
                 sys.exit(0)
-            ret = Aes256GcmCipher(bytes(value, 'utf-8'))
+            ret.nonce = byt
         else:
             log.warning(f"Unrecognized key '{key}' in params string.")
 
@@ -69,7 +69,7 @@ def supported_ciphers() -> Iterable[str]:
 
 
 def default_cipher() -> Cipher:
-    return Aes256GcmCipher(rand_bytes(32))
+    return Aes256GcmCipher()
 
 
 def deserialize(props: Dict[str, Union[str, int, bool, None, Dict, List]]):

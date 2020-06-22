@@ -73,13 +73,13 @@ if options.action not in {"enc", "dec", "kdfs", "ciphers"}:
 
 if not stdin.isatty() and options.pass_env is None:
     options.pass_env = "EASYENCRYPT_PW"
-if options.pass_env is not None:
-    password = os.environ.get(options.pass_env)
-    if password is None:
-        print(f"\nThe password environment variable '{options.pass_env}' was not set.")
+password = os.environ.get(options.pass_env)
+if password is None:
+    if not sys.stdin.isatty():
+        log.error(f"\nThe password environment variable '{options.pass_env}' was not set and stdin is not a tty.")
         sys.exit(1)
-else:
-    password = getpass.getpass("Enter passphrase: ")
+    else:
+        password = getpass.getpass("Enter passphrase: ")
 
 if options.kdf is None:
     kdf = kdfs.kdfext.default_kdf()
